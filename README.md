@@ -1,123 +1,127 @@
 # Clerk Webhook Integration with Novu Notifications
 
-This guide demonstrates how to integrate Clerk webhooks with Novu notifications in a Next.js application. You'll learn how to automatically trigger notification workflows when Clerk events occur, such as user creation or email events.
+## Introduction
+
+This guide walks you through integrating **Clerk webhooks** with **Novu notifications** in a **Next.js** application. 
+
+You’ll learn how to automatically trigger notification workflows when **any Clerk event** occurs, such as **user creation, email events, or password changes**.
+
+---
 
 ## Overview
 
-When certain events happen in Clerk (like user signup or password changes), this integration will:
-1. Receive the webhook event from Clerk
-2. Verify the webhook signature
-3. Process the event data
-4. Trigger appropriate Novu notification workflows
+When specific events happen in Clerk (e.g., user signup, password changes, email verification), this integration will:
+1. Receive the webhook event from Clerk.
+2. Verify the webhook signature.
+3. Process the event data.
+4. Trigger the corresponding **Novu notification workflow**.
 
-## **Before you start**
+---
 
-* [A Clerk + Next.js app is required.](https://clerk.com/docs/quickstarts/nextjs)
-* [A ngrok account is required.](https://dashboard.ngrok.com/signup)
-* [A Novu account is required.](https://novu.com/signup)
+## Prerequisites
 
-The recommended way to sync Clerk data to your app is through webhooks.
+Before proceeding, ensure you have:
 
-In this guide, you'll set up a webhook in your Next.js app to listen for the `user.created` and `email.created` events, create an endpoint in the Clerk Dashboard, build a handler, and test it locally using ngrok, the Clerk Dashboard and Novu.
+* A **Clerk + Next.js app** ([Set up Clerk](https://clerk.com/docs/quickstarts/nextjs)).
+* A **ngrok account** ([Sign up here](https://dashboard.ngrok.com/signup)).
+* A **Novu account** ([Sign up here](https://novu.com/signup)).
 
-These steps apply to any Clerk event. To make the setup process easier, it's recommended to keep two browser tabs open: one for your Clerk [**Webhooks**](https://dashboard.clerk.com/last-active?path=webhooks) page and one for your [ngrok dashboard](https://dashboard.ngrok.com/).
+### 📌 Tip:
 
-## Architecture
+To simplify the setup, keep two browser tabs open:
+* **Clerk Webhooks**: [Dashboard Link](https://dashboard.clerk.com/last-active?path=webhooks).
+* **ngrok Dashboard**: [Dashboard Link](https://dashboard.ngrok.com/).
 
-```mermaid
-graph LR
-    A[Clerk Event] --> B[Webhook Endpoint]
-    B --> C[Event Processing]
-    C --> D[Novu Trigger]
-    D --> E[Notification Sent]
-```
+---
 
-## Installation
+## Step 1: Install Dependencies
 
-1. Install required dependencies:
+Run the following command to install the required packages:
 
 ```bash
-npm install svix @novu/api
+npm install svix @novu/api @clerk/nextjs
 ```
 
-2. Configure environment variables:
+--- 
+
+## Step 2: Configure Environment Variables
+
+Add the following variables to your `.env.local` file:
 
 ```env
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
 CLERK_SECRET_KEY=sk_test_...
 SIGNING_SECRET=whsec_...
-NOVU_SECRET_KEY=...
+NOVU_SECRET_KEY=novu_secret_...
 ```
 
-## [**Set up ngrok**](https://clerk.com/docs/webhooks/sync-data#set-up-ngrok)
+---
 
-To test a webhook locally, you need to expose your local server to the internet. This guide uses [ngrok](https://ngrok.com/) which creates a **forwarding URL** that sends the webhook payload to your local server.
+## Step 3: Set Up ngrok
 
-1. Navigate to the [ngrok dashboard](https://dashboard.ngrok.com/) to create an account.
-2. On the ngrok dashboard homepage, follow the [setup guide](https://dashboard.ngrok.com/get-started/setup) instructions. Under **Deploy your app online**, select **Static domain**. Run the provided command, replacing the port number with your server's port. For example, if your development server runs on port 3000, the command should resemble `ngrok http --url=<YOUR_FORWARDING_URL> 3000`. This creates a free static domain and starts a tunnel.
-3. Save your **Forwarding** URL somewhere secure.
+To test webhooks locally, expose your **local server** using ngrok.
+1. Create an account at [ngrok dashboard](https://dashboard.ngrok.com/).
+2. Follow the [setup guide](https://dashboard.ngrok.com/get-started/setup).
+3. Run the command (assuming your server runs on port `3000`):
 
-## [**Set up a webhook endpoint**](https://clerk.com/docs/webhooks/sync-data#set-up-a-webhook-endpoint)
-
-1. In the Clerk Dashboard, navigate to the [**Webhooks**](https://dashboard.clerk.com/last-active?path=webhooks) page.
-2. Select **Add Endpoint**.
-3. In the **Endpoint URL** field, paste the ngrok **Forwarding** URL you saved earlier, followed by `/api/webhooks`. This is the endpoint that Svix uses to send the webhook payload. The full URL should resemble `https://fawn-two-nominally.ngrok-free.app/api/webhooks`.
-4. In the **Subscribe to events** section, scroll down and select `user.created`.
-5. Select **Create**. You'll be redirected to your endpoint's settings page. Keep this page open.
-
-## [**Add your Signing Secret to `.env.local` **](https://clerk.com/docs/webhooks/sync-data#add-your-signing-secret-to-env-local)
-
-To verify the webhook payload, you'll need your endpoint's **Signing Secret**. 
-
-Since you don't want this secret exposed in your codebase, store it as an environment variable in your `.env` file during local development.
-
-1. On the endpoint's settings page in the Clerk Dashboard, copy the **Signing Secret**. You may need to select the eye icon to reveal the secret.
-2. In your project's root directory, open or create an `.env` file, which should already include your Clerk API keys. Assign your **Signing Secret** to `SIGNING_SECRET`. The file should resemble:
-3. 
-
-```markdown
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
-CLERK_SECRET_KEY=
-SIGNING_SECRET=
-NOVU_SECRET_KEY=
+```bash
+ngrok http 3000
 ```
 
-## [**Set the webhook route as public in your Middleware**](https://clerk.com/docs/webhooks/sync-data#set-the-webhook-route-as-public-in-your-middleware)
+4. Copy and save the **Forwarding URL** (e.g., `https://your-ngrok-url.ngrok.io`).
 
-Incoming webhook events don't contain auth information. They come from an external source and aren't signed in or out, so the route must be public to allow access. If you're using `clerkMiddleware()` , ensure that the `/api/webhooks(.*)` route is set as public. For information on configuring routes, see the [ `clerkMiddleware()` guide](https://clerk.com/docs/references/nextjs/clerk-middleware).
+---
 
-## [**Install `svix` **](https://clerk.com/docs/webhooks/sync-data#install-svix)
+## Step 4: Set Up Clerk Webhook Endpoint
 
-Clerk uses [ `svix` ](https://www.npmjs.com/package/svix) to deliver webhooks, so you'll use it to verify the webhook signature. Run the following command in your terminal to install the package:
+1. Go to the **Clerk Webhooks** page ([link](https://dashboard.clerk.com/last-active?path=webhooks)).
+2. Click **Add Endpoint**.
+3. Set the **Endpoint URL** as:
+   
 
-```markdown
-npm install svix
+```text
+   https://your-ngrok-url.ngrok.io/api/webhooks/clerk
+   ```
+
+4. Subscribe to the **relevant Clerk events** (e.g.,  `user.created`,  `email.created` etc.).
+5. Click **Create** and keep the settings page open.
+
+---
+
+## Step 5: Add Signing Secret to Environment Variables
+
+1. Copy the **Signing Secret** from Clerk's **Webhook Endpoint Settings**.
+2. Add it to your `.env.local` file:
+   
+
+```env
+   SIGNING_SECRET=your_signing_secret_here
+   ```
+
+---
+
+## Step 6: Make Webhook Route Public
+
+Ensure the webhook route is public by updating `middleware.ts` :
+
+```typescript
+import { clerkMiddleware } from '@clerk/nextjs/server';
+export default clerkMiddleware({
+  publicRoutes: ['/api/webhooks'],
+});
 ```
 
-## [Create the endpoints](https://clerk.com/docs/webhooks/sync-data#create-the-endpoint)
+---
 
-### Clerk:
+## Step 7: Create Webhook Endpoint for Clerk in Next.js
 
-Set up a Route Handler that uses `svix` to verify the incoming Clerk webhook and process the payload.
+Create `app/api/webhooks/clerk/route.ts` :
 
-For example, if listening for the `user.created` event, you might perform a database `create` or `upsert` to add the user's Clerk data to your database's user table.
-
-If the route handler returns a [4xx](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status#client_error_responses) or [5xx code](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status#server_error_responses), or no code at all, the webhook event will be [retried](https://clerk.com/docs/webhooks/overview#retry). If the route handler returns a [2xx code](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status#successful_responses), the event will be marked as successful, and retries will stop.
-
-<aside>
-<img src="https://www.notion.so/icons/info-alternate_gray.svg" alt="https://www.notion.so/icons/info-alternate_gray.svg" width="40px" />
-
-**Note** The following Route Handler can be used for any webhook event you choose to listen to.
-
-</aside>
-
-```jsx
-// app/api/auth/route.ts
-
+```typescript
 import { Webhook } from 'svix'
 import { headers } from 'next/headers'
 import { WebhookEvent } from '@clerk/nextjs/server'
-import { triggerWorkflow } from '../notifications/route'
+import { triggerWorkflow } from '../../notifications/route'
 
 export async function POST(req: Request) {
     const SIGNING_SECRET = process.env.SIGNING_SECRET
@@ -202,6 +206,7 @@ export async function POST(req: Request) {
     }
     
     // Email events (verification_code, password_changed, magic_link_sign_in, reset_password_code, organization_invitation, invitation)
+
     if (evt.type === 'email.created') {
         const data = evt.data;
         const subscriber = {
@@ -327,105 +332,52 @@ export async function POST(req: Request) {
 }
 ```
 
-### Novu
+---
 
-```jsx
-// app/api/notifications/route.ts
+## Step 8: Add Novu Workflow Notification Trigger Function
 
+Create `app/api/notifications/route.ts` :
+
+```typescript
 import { Novu } from '@novu/api';
+const novu = new Novu(process.env.NOVU_SECRET_KEY);
 
-const novu = new Novu({
-    secretKey: process.env['NOVU_SECRET_KEY']
-});
-
-export async function triggerWorkflow(workflow: string, subscriber: object, payload: object) {
+export async function triggerWorkflow(workflowId: string, subscriber: object, payload: object) {
     try {
         await novu.trigger({
-            workflowId: workflow,
-            to: subscriber as any,
-            payload: payload as any
+            workflowId,
+            to: subscriber,
+            payload
         });
-        return new Response(JSON.stringify({ message: 'Notification triggered successfully' }), { status: 200 });
+        return new Response('Notification triggered', { status: 200 });
     } catch (error) {
-        console.error('Error triggering notification:', error);
-        return new Response(JSON.stringify({ message: 'Failed to trigger notification' }), { status: 500 });
+        return new Response('Error triggering notification', { status: 500 });
     }
 }
 ```
 
-## [**Narrow to a webhook event for type inference**](https://clerk.com/docs/webhooks/sync-data#narrow-to-a-webhook-event-for-type-inference)
+---
 
-`WebhookEvent` encompasses all possible webhook types. Narrow down the event type for accurate typing for specific events.
+## Step 9: Add or create Novu workflows in your Novu dashboard
 
-In the following example, the `if` statement narrows the type to `user.created` , enabling type-safe access to evt.data with autocompletion.
+Each workflow should be triggered by a specific event.
 
-```jsx
-if (evt.type === 'user.created') {
-  console.log('userId:', evt.data.id)
-}
-```
+For example, you can create a workflow to trigger when a user is created.
 
-## [**Test the webhook**](https://clerk.com/docs/webhooks/sync-data#test-the-webhook)
+---
+
+## Step 10: Test the Webhook
 
 1. Start your Next.js server.
-2. In your endpoint's settings page in the Clerk Dashboard, select the **Testing** tab.
-3. In the **Select event** dropdown, select `user.created`.
-4. Select **Send Example**.
-5. In the **Message Attempts** section, confirm that the event's **Status** is labeled with **Succeeded**.
+2. Go to **Clerk Webhooks → Testing**.
+3. Select an event (e.g., `user.created`, `email.created`).
+4. Click **Send Example**.
+5. Verify logs in **your terminal**.
 
-### [**Handling failed messages**](https://clerk.com/docs/webhooks/sync-data#handling-failed-messages)
+---
 
-1. In the **Message Attempts** section, select the event whose **Status** is labeled with **Failed**.
-2. Scroll down to the **Webhook Attempts** section.
-3. Toggle the arrow next to the **Status** column.
-4. Review the error. Solutions vary by error type. For more information, refer to the [Debug your webhooks](https://clerk.com/docs/webhooks/debug-your-webhooks) guide.
+## Conclusion
 
-## [**Trigger the webhook**](https://clerk.com/docs/webhooks/sync-data#trigger-the-webhook)
+You’ve successfully integrated Clerk webhooks with Novu to automate notifications for **any Clerk event**. Now, every time a **user is created, an email is sent, or a password is changed**, Novu will send notifications automatically!
 
-To trigger the `user.created` event, create a new user in your app.
-
-You should be able to see the webhook's payload logged to your terminal where your app is running. You can also check the Clerk Dashboard to see the webhook attempt, the same way you did when [testing the webhook](https://clerk.com/docs/webhooks/sync-data#test-the-webhook).
-
-## Novu Workflow Setup
-
-1. Create the following workflows in your Novu dashboard:
-   - `clerk-user-created`
-
-   - `clerk-verification-code`
-
-   - `clerk-password-changed`
-
-   - `clerk-magic-link-sign-in`
-
-   - `clerk-reset-password-code`
-
-   - `clerk-organization-invitation`
-
-   - `clerk-invitation`
-
-2. Configure each workflow with appropriate templates and channels (email, SMS, etc.)
-
-## Troubleshooting
-
-Common issues and solutions:
-
-1. Webhook verification fails
-   - Double-check your `SIGNING_SECRET` in .env
-   - Ensure headers are being passed correctly
-
-2. Novu triggers fail
-   - Verify your `NOVU_SECRET_KEY`
-
-   - Check workflow IDs match exactly
-   - Confirm subscriber data format
-
-3. ngrok connection issues
-   - Ensure your ngrok tunnel is running
-   - Verify the forwarding URL in Clerk matches your ngrok URL
-
-## Security Considerations
-
-* Always verify webhook signatures
-* Store secrets securely in environment variables
-* Set appropriate middleware protections
-* Monitor webhook logs for unusual activity
+Happy coding! 🚀
