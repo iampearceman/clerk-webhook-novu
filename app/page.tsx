@@ -14,7 +14,7 @@ import { Footer } from "./components/footer"
 import { CARDS } from "./consts/cards"
 import { ClerkLogo } from "./components/clerk-logo"
 import { NextLogo } from "./components/next-logo"
-
+import { NovuLogo } from "./components/novu-logo"
 export default function Home() {
   return (
     <>
@@ -31,6 +31,8 @@ export default function Home() {
           <div className="px-12 py-16 border-b border-[#F2F2F4]">
             <div className="bg-[#F4F4F5] px-4 py-3 rounded-full inline-flex gap-4">
               <ClerkLogo />
+              <div aria-hidden className="w-px h-6 bg-[#C7C7C8]" />
+              <NovuLogo />
               <div aria-hidden className="w-px h-6 bg-[#C7C7C8]" />
               <NextLogo />
             </div>

@@ -5,8 +5,10 @@ import { LearnMore } from "../components/learn-more";
 import { Footer } from "../components/footer";
 import { ClerkLogo } from "../components/clerk-logo";
 import { NextLogo } from "../components/next-logo";
+import { NovuInbox } from "../components/novu-inbox";
 
 import { DASHBOARD_CARDS } from "../consts/cards";
+import { NovuLogo } from "../components/novu-logo";
 
 export default async function DashboardPage() {
   return (
@@ -18,7 +20,10 @@ export default async function DashboardPage() {
               <div className="flex gap-4">
                 <ClerkLogo />
                 <div aria-hidden className="w-px h-6 bg-[#C7C7C8]" />
+                <NovuLogo />
+                <div aria-hidden className="w-px h-6 bg-[#C7C7C8]" />
                 <NextLogo />
+
               </div>
               <div className="flex items-center gap-2">
                 <OrganizationSwitcher
@@ -28,6 +33,7 @@ export default async function DashboardPage() {
                     },
                   }}
                 />
+                <NovuInbox />
                 <UserButton
                   afterSignOutUrl="/"
                   appearance={{
@@ -37,6 +43,7 @@ export default async function DashboardPage() {
                   }}
                 />
               </div>
+
             </header>
             <UserDetails />
           </div>
